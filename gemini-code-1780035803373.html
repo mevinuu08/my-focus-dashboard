@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flocus Clone Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&family=Space+Mono:wght@700&family=Playfair+Display:wght@700&family=Caveat:wght@700&family=Oswald:wght@500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0d0e15;
+            --sidebar-bg: #11121a;
+            --accent: #6b4cff;
+            --text-main: #ffffff;
+            --text-muted: #8b8d98;
+        }
+
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            font-family: 'Inter', sans-serif; color: var(--text-main);
+            overflow: hidden;
+        }
+
+        /* Background Layers */
+        #main-bg {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, #3a206b, #b94b79, #e67566);
+            background-size: 200% 200%; background-position: center;
+            z-index: -3; animation: gradientShift 15s ease infinite;
+        }
+        @keyframes gradientShift { 
+            0% { background-position: 0% 50%; } 
+            50% { background-position: 100% 50%; } 
+            100% { background-position: 0% 50%; } 
+        }
+
+        #video-container {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -3; display: none; overflow: hidden; pointer-events: none;
+        }
+        
+        #bg-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: black; opacity: 0; z-index: -2; transition: opacity 0.3s;
+        }
+
+        /* Main UI */
+        .header { position: absolute; top: 30px; left: 40px; right: 40px; display: flex; justify-content: space-between; z-index: 10; }
+        .logo { font-size: 1.8rem; font-weight: 700; letter-spacing: -1px; }
+        .quote { font-size: 1rem; max-width: 300px; text-align: right; font-weight: 500; }
+
+        .center-stage {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            height: 100vh; text-align: center; z-index: 10; position: relative;
+        }
+
+        h2 { font-weight: 500; font-size: 1.4rem; margin-bottom: 20px; text-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+
+        #phase-container { display: flex; gap: 10px; margin-bottom: 20px; height: 35px; }
+        .phase-btn {
+            background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); color: var(--text-main);
+            padding: 5px 20px; border-radius: 20px; cursor: pointer; font-size: 0.9rem; font-weight: 500; transition: 0.3s; backdrop-filter: blur(5px);
+        }
+        .phase-btn.active { background: var(--accent); border-color: var(--accent); }
+
+        #timer-display { font-size: 9rem; font-weight: 700; line-height: 1; margin: 10px 0; letter-spacing: -3px; transition: font-family 0.3s; text-shadow: 0 4px 20px rgba(0,0,0,0.4); }
+        #stopwatch-sub { font-size: 1.5rem; display: none; margin-bottom: 20px; text-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+
+        .controls { display: flex; align-items: center; gap: 15px; margin-top: 20px; }
+        .start-btn { background: var(--accent); border: none; color: white; padding: 12px 40px; border-radius: 12px; font-size: 1.1rem; font-weight: 600; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        .start-btn:hover { opacity: 0.9; transform: translateY(-2px); }
+        .icon-btn { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); color: white; border-radius: 10px; padding: 10px 15px; cursor: pointer; backdrop-filter: blur(5px); }
+
+        /* Spotify Container */
+        #spotify-container {
+            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+            width: 400px; max-width: 90%; border-radius: 12px; overflow: hidden; z-index: 10;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+        }
+
+        /* Bottom Navbar */
+        .bottom-nav { position: absolute; bottom: 30px; right: 40px; display: flex; gap: 10px; background: rgba(0,0,0,0.4); padding: 8px; border-radius: 12px; backdrop-filter: blur(10px); z-index: 10;}
+        .nav-icon { background: transparent; border: none; color: white; font-size: 1.2rem; cursor: pointer; padding: 5px 10px; border-radius: 8px; }
+        .nav-icon:hover { background: rgba(255,255,255,0.1); }
+
+        /* Settings Sidebar */
+        #sidebar {
+            position: fixed; top: 0; right: -400px; width: 340px; height: 100%;
+            background: var(--sidebar-bg); border-left: 1px solid rgba(255,255,255,0.05);
+            transition: right 0.3s ease; padding: 30px; box-sizing: border-box; overflow-y: auto; z-index: 50;
+        }
+        #sidebar.open { right: 0; }
+        .sidebar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .close-btn { background: transparent; border: none; color: white; font-size: 1.5rem; cursor: pointer; }
+        
+        .form-group { margin-bottom: 20px; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); }
+        label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 8px; }
+        select, input[type="text"], input[type="number"] {
+            width: 100%; background: #1a1b26; border: 1px solid rgba(255,255,255,0.1); 
+            color: white; padding: 10px; border-radius: 8px; font-family: 'Inter'; box-sizing: border-box; margin-bottom: 10px;
+        }
+        .time-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+        .time-inputs div { text-align: center; }
+        .time-inputs label { font-size: 0.7rem; color: var(--text-muted); margin-bottom: 5px; }
+
+        /* File Upload & Range Styles */
+        input[type="file"] { font-size: 0.8rem; background: transparent; border: 1px dashed rgba(255,255,255,0.3); padding: 15px; border-radius: 8px; cursor: pointer; margin-bottom: 15px; width: 100%; box-sizing: border-box; }
+        input[type="range"] { width: 100%; margin: 10px 0; accent-color: var(--accent); }
+
+        /* Stats Modal */
+        #stats-modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(13, 14, 21, 0.95); backdrop-filter: blur(15px); z-index: 100; padding: 50px; box-sizing: border-box; overflow-y: auto;
+        }
+        .stats-header { display: flex; justify-content: space-between; align-items: center; max-width: 800px; margin: 0 auto 30px auto; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; max-width: 800px; margin: 0 auto; }
+        .stat-card { padding: 25px; border-radius: 16px; color: white; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+        .stat-card span { font-size: 0.9rem; font-weight: 600; opacity: 0.9; }
+        .stat-card h3 { font-size: 2rem; margin: 0; font-weight: 700; }
+        
+        .c-red { background: linear-gradient(135deg, #ff4b2b, #ff416c); }
+        .c-orange { background: linear-gradient(135deg, #f7971e, #ffd200); }
+        .c-purple { background: linear-gradient(135deg, #654ea3, #eaafc8); }
+        .c-green { background: linear-gradient(135deg, #11998e, #38ef7d); }
+        .c-blue { background: linear-gradient(135deg, #2193b0, #6dd5ed); }
+        .c-pink { background: linear-gradient(135deg, #ee0979, #ff6a00); }
+
+    </style>
+</head>
+<body>
+
+    <div id="main-bg"></div>
+    <div id="video-container">
+        <iframe id="yt-iframe" width="100%" height="150%" src="" frameborder="0" allow="autoplay; encrypted-media" style="position: absolute; top: -25%;"></iframe>
+    </div>
+    <div id="bg-overlay"></div>
+
+    <div class="header">
+        <div class="logo">flocus</div>
+        <div class="quote" id="daily-quote">"Success all depends on the second letter."</div>
+    </div>
+
+    <div class="center-stage">
+        <h2>What do you want to focus on?</h2>
+        
+        <div id="phase-container"></div>
+
+        <div id="timer-display" style="font-family: 'Inter', sans-serif;">00:00</div>
+        <div id="stopwatch-sub">Current: 00:00</div>
+
+        <div class="controls">
+            <button class="start-btn" id="btn-start" onclick="toggleTimer()">Start</button>
+            <button class="start-btn" id="btn-lap" style="display:none; background: #333;" onclick="recordLap()">Lap</button>
+            <button class="icon-btn" onclick="resetTimer()">↺</button>
+        </div>
+    </div>
+
+    <div id="spotify-container">
+        <iframe id="spotify-frame" src="https://open.spotify.com/embed/playlist/37i9dQZF1DXcBWIGoYBM5M?utm_source=generator&theme=0" width="100%" height="80" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe>
+    </div>
+
+    <div class="bottom-nav">
+        <button class="nav-icon" onclick="openStats()">📊</button>
+        <button class="nav-icon" onclick="toggleSidebar()">⚙️</button>
+    </div>
+
+    <div id="stats-modal">
+        <div class="stats-header">
+            <div>
+                <h1 style="margin:0;">Focus Stats</h1>
+                <p style="color:var(--text-muted); margin-top:5px;">Refine your workflow with insights into your patterns.</p>
+            </div>
+            <button class="icon-btn" style="border:none; font-size:1.5rem;" onclick="closeStats()">✕</button>
+        </div>
+        <div class="stats-grid">
+            <div class="stat-card c-red"><span>Streak</span><h3 id="stat-streak">0 days</h3></div>
+            <div class="stat-card c-orange"><span>Focus Time</span><h3 id="stat-f-time">0m</h3></div>
+            <div class="stat-card c-purple"><span>Focus Score</span><h3 id="stat-score">0</h3></div>
+            <div class="stat-card c-green"><span>Tasks Completed</span><h3>-</h3></div>
+            <div class="stat-card c-blue"><span>Sessions</span><h3 id="stat-sessions">0</h3></div>
+            <div class="stat-card c-pink"><span>Break Time</span><h3 id="stat-b-time">0m</h3></div>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <div class="sidebar-header">
+            <h3>Settings</h3>
+            <button class="close-btn" onclick="toggleSidebar()">✕</button>
+        </div>
+
+        <div class="form-group">
+            <label>Custom Background Image</label>
+            <input type="file" id="bg-upload" accept="image/*" onchange="handleImageUpload(event)">
+            
+            <label>Overlay Opacity (<span id="overlay-val">0</span>%)</label>
+            <input type="range" id="bg-opacity" min="0" max="100" value="0" oninput="changeOverlay(this.value)">
+
+            <label style="margin-top: 15px;">Video Background (YouTube)</label>
+            <input type="text" id="yt-url" placeholder="Paste YouTube link...">
+            <button class="start-btn" style="width: 100%; padding: 8px; font-size: 0.9rem; margin-top: 5px;" onclick="setVideoBg()">Apply Video</button>
+            
+            <label style="margin-top: 15px;">Spotify Embed Link</label>
+            <input type="text" id="set-spotify" placeholder="Paste Spotify URL here...">
+        </div>
+
+        <div class="form-group">
+            <label>Clock & Timer Style</label>
+            <select id="cfg-font" onchange="changeFont()">
+                <option value="'Inter', sans-serif">Default</option>
+                <option value="'Space Mono', monospace">Minimal</option>
+                <option value="'Inter', sans-serif|300">Minimal Light</option>
+                <option value="'Playfair Display', serif">Serif</option>
+                <option value="'Oswald', sans-serif">Serif Condensed</option>
+                <option value="'Caveat', cursive">Handwritten</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Timer mode</label>
+            <select id="cfg-mode" onchange="modeChangedInSettings()">
+                <option value="Pomodoro">Pomodoro</option>
+                <option value="Countdown">Countdown</option>
+                <option value="Stopwatch">Stopwatch (Count-Up)</option>
+                <option value="Animedoro">Animedoro</option>
+                <option value="52/17">52/17</option>
+            </select>
+        </div>
+
+        <div class="form-group" id="len-pomo">
+            <label>Timer Lengths (Pomodoro)</label>
+            <div class="time-inputs">
+                <div><label>Focus</label><input type="number" id="val-pomo-f" value="25"></div>
+                <div><label>Short Break</label><input type="number" id="val-pomo-s" value="5"></div>
+                <div><label>Long Break</label><input type="number" id="val-pomo-l" value="15"></div>
+            </div>
+        </div>
+
+        <div class="form-group" id="len-anime" style="display:none;">
+            <label>Timer Lengths (Animedoro)</label>
+            <div class="time-inputs">
+                <div><label>Focus</label><input type="number" id="val-ani-f" value="40"></div>
+                <div><label>Watch</label><input type="number" id="val-ani-w" value="20"></div>
+            </div>
+        </div>
+
+        <div class="form-group" id="len-count" style="display:none;">
+            <label>Countdown</label>
+            <input type="number" id="val-countdown" value="120">
+        </div>
+
+        <button class="start-btn" style="width: 100%; margin-top: 10px;" onclick="saveConfig()">Save Settings</button>
+    </div>
+
+    <script>
+        // -- STATE --
+        let currentMode = "Pomodoro";
+        let currentPhase = "Focus";
+        let timerInterval = null;
+        let isRunning = false;
+        let timeInSeconds = 25 * 60;
+        
+        // -- STATS TRACKER --
+        let userStats = JSON.parse(localStorage.getItem('flocus_stats')) || {
+            focusSeconds: 0, breakSeconds: 0, sessions: 0, score: 0
+        };
+
+        const modePhases = {
+            "Pomodoro": ["Focus", "Short Break", "Long Break"],
+            "Animedoro": ["Focus", "Watch"],
+            "52/17": ["Focus", "Break"],
+            "Countdown": [],
+            "Stopwatch": []
+        };
+
+        window.onload = () => {
+            renderMainScreen();
+            loadCustomMedia();
+        };
+
+        // --- MEDIA & STYLING FUNCTIONS ---
+        function handleImageUpload(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    document.getElementById('main-bg').style.backgroundImage = `url(${event.target.result})`;
+                    document.getElementById('video-container').style.display = 'none';
+                    document.getElementById('main-bg').style.animation = 'none';
+                    try { localStorage.setItem('flocus_bg_img', event.target.result); } catch(err) { console.log('File too large for cache'); }
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function setVideoBg() {
+            const url = document.getElementById('yt-url').value;
+            let videoId = null;
+            if (url.includes('v=')) videoId = url.split('v=')[1].substring(0, 11);
+            else if (url.includes('youtu.be/')) videoId = url.split('youtu.be/')[1].substring(0, 11);
+            
+            if (videoId) {
+                document.getElementById('yt-iframe').src = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0&showinfo=0`;
+                document.getElementById('video-container').style.display = 'block';
+                document.getElementById('main-bg').style.backgroundImage = 'none';
+                localStorage.setItem('flocus_bg_vid', videoId);
+            }
+        }
+
+        function changeOverlay(val) {
+            document.getElementById('bg-overlay').style.opacity = val / 100;
+            document.getElementById('overlay-val').innerText = val;
+            localStorage.setItem('flocus_bg_overlay', val);
+        }
+
+        function changeFont() {
+            let fontStr = document.getElementById('cfg-font').value;
+            let timerEl = document.getElementById('timer-display');
+            if(fontStr.includes('|')) {
+                timerEl.style.fontFamily = fontStr.split('|')[0];
+                timerEl.style.fontWeight = fontStr.split('|')[1];
+            } else {
+                timerEl.style.fontFamily = fontStr;
+                timerEl.style.fontWeight = 700;
+            }
+        }
+
+        function loadCustomMedia() {
+            let savedImg = localStorage.getItem('flocus_bg_img');
+            let savedVid = localStorage.getItem('flocus_bg_vid');
+            let savedOverlay = localStorage.getItem('flocus_bg_overlay');
+            let savedSpotify = localStorage.getItem('flocus_spotify');
+            
+            if(savedVid) {
+                document.getElementById('yt-url').value = `https://youtu.be/${savedVid}`;
+                setVideoBg();
+            } else if (savedImg) {
+                document.getElementById('main-bg').style.backgroundImage = `url(${savedImg})`;
+                document.getElementById('main-bg').style.animation = 'none';
+            }
+
+            if(savedOverlay) {
+                document.getElementById('bg-opacity').value = savedOverlay;
+                changeOverlay(savedOverlay);
+            }
+            
+            if(savedSpotify) {
+                document.getElementById('set-spotify').value = savedSpotify;
+                document.getElementById('spotify-frame').src = savedSpotify;
+            }
+        }
+
+        // --- STATS SYSTEM ---
+        function updateStatsUI() {
+            document.getElementById('stat-f-time').innerText = Math.floor(userStats.focusSeconds / 60) + "m";
+            document.getElementById('stat-b-time').innerText = Math.floor(userStats.breakSeconds / 60) + "m";
+            document.getElementById('stat-sessions').innerText = userStats.sessions;
+            document.getElementById('stat-score').innerText = Math.floor(userStats.focusSeconds / 300);
+            document.getElementById('stat-streak').innerText = userStats.sessions > 0 ? "1 day" : "0 days"; 
+        }
+
+        function openStats() {
+            updateStatsUI();
+            document.getElementById('stats-modal').style.display = 'block';
+        }
+        function closeStats() { document.getElementById('stats-modal').style.display = 'none'; }
+
+
+        // --- ORIGINAL TIMER CORE ---
+        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
+
+        function modeChangedInSettings() {
+            const mode = document.getElementById('cfg-mode').value;
+            document.getElementById('len-pomo').style.display = (mode === 'Pomodoro') ? 'block' : 'none';
+            document.getElementById('len-anime').style.display = (mode === 'Animedoro') ? 'block' : 'none';
+            document.getElementById('len-count').style.display = (mode === 'Countdown') ? 'block' : 'none';
+        }
+
+        function saveConfig() {
+            currentMode = document.getElementById('cfg-mode').value;
+            currentPhase = "Focus"; 
+            
+            // Handle Spotify URL parsing to ensure it embeds correctly
+            let spotUrl = document.getElementById('set-spotify').value;
+            if (spotUrl && !spotUrl.includes('embed')) {
+                spotUrl = spotUrl.replace('spotify.com/', 'spotify.com/embed/');
+            }
+            if (spotUrl) {
+                localStorage.setItem('flocus_spotify', spotUrl);
+                document.getElementById('spotify-frame').src = spotUrl;
+            }
+
+            changeFont();
+            toggleSidebar();
+            renderMainScreen();
+        }
+
+        function renderMainScreen() {
+            resetTimerCore();
+            const phaseContainer = document.getElementById('phase-container');
+            phaseContainer.innerHTML = ''; 
+
+            const phases = modePhases[currentMode];
+            if (phases.length > 0) {
+                phases.forEach(p => {
+                    let btn = document.createElement('button');
+                    btn.className = `phase-btn ${p === currentPhase ? 'active' : ''}`;
+                    btn.innerText = p;
+                    btn.onclick = () => switchPhase(p);
+                    phaseContainer.appendChild(btn);
+                });
+            }
+
+            if (currentMode === "Stopwatch") {
+                document.getElementById('btn-lap').style.display = 'block';
+                document.getElementById('stopwatch-sub').style.display = 'block';
+                timeInSeconds = 0;
+            } else {
+                document.getElementById('btn-lap').style.display = 'none';
+                document.getElementById('stopwatch-sub').style.display = 'none';
+                setTimeFromInputs();
+            }
+            updateDisplay();
+        }
+
+        function switchPhase(phaseName) {
+            currentPhase = phaseName;
+            renderMainScreen(); 
+        }
+
+        function setTimeFromInputs() {
+            let mins = 0;
+            if (currentMode === "Pomodoro") {
+                if (currentPhase === "Focus") mins = document.getElementById('val-pomo-f').value;
+                if (currentPhase === "Short Break") mins = document.getElementById('val-pomo-s').value;
+                if (currentPhase === "Long Break") mins = document.getElementById('val-pomo-l').value;
+            } else if (currentMode === "Animedoro") {
+                if (currentPhase === "Focus") mins = document.getElementById('val-ani-f').value;
+                if (currentPhase === "Watch") mins = document.getElementById('val-ani-w').value;
+            } else if (currentMode === "52/17") {
+                mins = (currentPhase === "Focus") ? 52 : 17;
+            } else if (currentMode === "Countdown") {
+                mins = document.getElementById('val-countdown').value;
+            }
+            timeInSeconds = parseInt(mins) * 60;
+        }
+
+        function toggleTimer() {
+            if (isRunning) {
+                clearInterval(timerInterval);
+                document.getElementById('btn-start').innerText = "Start";
+            } else {
+                timerInterval = setInterval(tick, 1000);
+                document.getElementById('btn-start').innerText = "Pause";
+            }
+            isRunning = !isRunning;
+        }
+
+        function tick() {
+            if(currentMode !== "Stopwatch") {
+                if(currentPhase.includes("Focus")) userStats.focusSeconds++;
+                else userStats.breakSeconds++;
+                localStorage.setItem('flocus_stats', JSON.stringify(userStats));
+            }
+
+            if (currentMode === "Stopwatch") {
+                timeInSeconds++;
+            } else {
+                if (timeInSeconds > 0) timeInSeconds--;
+                else {
+                    clearInterval(timerInterval);
+                    isRunning = false;
+                    document.getElementById('btn-start').innerText = "Start";
+                    if(currentPhase.includes("Focus")) userStats.sessions++; 
+                    alert("Time's up!");
+                }
+            }
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            let h = Math.floor(timeInSeconds / 3600);
+            let m = Math.floor((timeInSeconds % 3600) / 60);
+            let s = timeInSeconds % 60;
+
+            let displayStr = "";
+            if (h > 0) displayStr = `${h}:${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
+            else displayStr = `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
+
+            document.getElementById('timer-display').innerText = displayStr;
+        }
+
+        function resetTimer() { resetTimerCore(); renderMainScreen(); }
+
+        function resetTimerCore() {
+            clearInterval(timerInterval);
+            isRunning = false;
+            document.getElementById('btn-start').innerText = "Start";
+            document.getElementById('stopwatch-sub').innerText = "Current: 00:00";
+        }
+
+        function recordLap() { document.getElementById('stopwatch-sub').innerText = `Lap: ${document.getElementById('timer-display').innerText}`; }
+    </script>
+</body>
+</html>
